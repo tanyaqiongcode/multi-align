@@ -36,7 +36,7 @@ export default [
     },
   },
   {
-    files: ["test/check_coverage.js"],
+    files: ["test/check_coverage.js", "test/*.cjs"],
     languageOptions: {
       sourceType: "commonjs",
       globals: { ...globals.node },

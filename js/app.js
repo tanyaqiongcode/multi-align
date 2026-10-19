@@ -183,6 +183,22 @@
 
   /* ==================== 第一步：版本管理 ==================== */
   function bindStep1() {
+    E('textFilesInput').addEventListener('change', async e => {
+      const files = Array.from(e.target.files || []);
+      e.target.value = '';
+      for (const file of files) {
+        if (state.versions.length >= 10) { toast('最多支持 10 个版本，其余文件未导入', 'warn'); break; }
+        const v = addVersion();
+        v.name = file.name.replace(/\.[^.]+$/, '').slice(0, 30) || v.name;
+        const card = Array.from(el.vlist.querySelectorAll('.vcard')).find(c => c.dataset.vid === v.id);
+        card.querySelector('.vname').value = v.name;
+        if (!await importFileToVersion(v, file, card)) {
+          state.versions = state.versions.filter(x => x.id !== v.id);
+          if (state.pivotId === v.id) state.pivotId = state.versions[0]?.id || null;
+          renderVersionCards();
+        }
+      }
+    });
     el.addVersionBtn.addEventListener('click', () => {
       if (state.versions.length >= 10) { toast('最多支持 10 个版本', 'warn'); return; }
       addVersion();
@@ -306,7 +322,7 @@
       '<button class="icon-btn vdel" title="移除此版本">✕</button>' +
       '</div>' +
       '<div class="vcard-pivot"><label><input type="radio" class="vpivot" name="pivotRadio"' + (isPivot ? ' checked' : '') + '> 设为基准语' + (isPivot ? '（当前）' : '') + '</label></div>' +
-      '<textarea class="vtext" placeholder="粘贴该语言文本…（也可点击下方“导入文件”，支持 txt / md / docx）"></textarea>' +
+      '<textarea class="vtext" placeholder="粘贴该语言文本…（也可导入 txt / md / docx / srt / vtt）"></textarea>' +
       '<div class="vcard-foot">' +
       '<label class="file-btn">导入文件<input type="file" class="vfile" accept=".txt,.md,.docx,.csv,.srt,.vtt" hidden></label>' +
       '<span class="vstats" data-stats>0 字符</span>' +
@@ -374,11 +390,12 @@
       }
       let text = (r.text || '').replace(/\u00a0/g, ' ');
       if (!text.trim()) { toast('文件内容为空', 'warn'); return; }
-      if (PA.SRT.looksLikeSrt(text)) {
-        applySrtToVersion(v, text, file.name, card);
+      if (r.type === 'srt' || PA.SRT.looksLikeSrt(text)) {
+        const ok = applySrtToVersion(v, text, file.name, card);
         updateStep1Bar();
-        return;
+        return ok;
       }
+      v.cues = null;
       v.text = text;
       card.querySelector('.vtext').value = text;
       const det = Seg.detectLang(text);
@@ -392,6 +409,8 @@
       if (state.tus.length) markDirty();
       scheduleStats(v.id, card, true);
       updateStep1Bar();
+      autosave();
+      return true;
     } catch (err) {
       toast('导入失败：' + (err && err.message || err), 'err');
     }
@@ -412,6 +431,7 @@
     if (card) scheduleStats(v.id, card, true);
     PA.Analytics.send('srt_import');
     autosave();
+    return true;
   }
 
   function loadSample() {
@@ -1370,6 +1390,10 @@
     toast('工程已保存：' + name, 'ok');
   }
   function openProjectFile(file) {
+    if (!/\.json$/i.test(file.name || '')) {
+      toast('此入口仅打开工程 JSON；TXT、SRT 等请使用「导入文本／字幕」', 'warn');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       try {

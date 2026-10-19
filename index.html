@@ -116,7 +116,8 @@
       </div>
       <div class="pane-toolbar">
         <button class="btn" id="btnSample">📚 载入多语示例</button>
-        <button class="btn" id="btnOpenProj">📂 打开工程文件</button>
+        <label class="btn">📄 导入文本／字幕<input type="file" id="textFilesInput" accept=".txt,.md,.csv,.docx,.srt,.vtt" multiple hidden></label>
+        <button class="btn" id="btnOpenProj">📂 打开工程（JSON）</button>
         <button class="btn btn-danger" id="btnClearProj">🗑 清空工程</button>
         <input type="file" id="projFileInput" accept=".json" hidden>
       </div>

@@ -10,6 +10,8 @@
 
 👉 **在线使用**：https://tanyaqiongcode.github.io/multi-align/ （纯静态页面，语料仅在浏览器本地处理）
 
+导入 TXT / SRT / VTT 等原始文件：进入工作台，点击「导入文本／字幕」，可多选文件自动建立版本；已有版本可用卡片中的「导入文件」替换。「打开工程（JSON）」仅用于恢复此前保存的工程，不用于导入文本或字幕。
+
 | 首页 | 审校编辑器（6 语对照） |
 |---|---|
 | ![首页](docs/screenshots/home.png) | ![审校编辑器](docs/screenshots/align-editor.png) |

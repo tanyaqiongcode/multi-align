@@ -53,6 +53,11 @@ jobs:
       - name: 导出编排 E2E（真实点击 TMX / SRT / SRT ZIP）
         run: bash test/run_e2e.sh
 
+      - name: 文件导入 E2E（TXT / SRT / 替换时间轴 / 无效文件）
+        run: |
+          npm ci
+          node test/import_browser.cjs
+
   lint:
     name: Lint（eslint）
     runs-on: ubuntu-latest
