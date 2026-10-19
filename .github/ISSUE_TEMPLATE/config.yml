@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: "📖 使用指南"
-    url: "https://tanyaqiong31029.github.io/multi-align/#/docs"
+    url: "https://tanyaqiongcode.github.io/multi-align/#/docs"
     about: "操作步骤、对齐质量建议与常见问题（多数疑问可直接解决）"
   - name: "💡 功能建议"
-    url: "https://github.com/tanyaqiong31029/multi-align/discussions"
+    url: "https://github.com/tanyaqiongcode/multi-align/discussions"
     about: "想法与讨论请到 Discussions，便于集中沉淀"
