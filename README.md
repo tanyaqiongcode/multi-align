@@ -130,7 +130,7 @@ python3 -m http.server 8000
 ```bibtex
 @misc{multialign2026,
   title        = {MultiAlign: A Zero-Dependency Client-Side Workbench for Multilingual Sentence Alignment},
-  author       = {tanyaqiong31029},
+  author       = {tanyaqiongcode},
   year         = {2026},
   howpublished = {\url{https://github.com/tanyaqiongcode/multi-align}},
   note         = {Online demo: https://tanyaqiongcode.github.io/multi-align/}
@@ -153,4 +153,4 @@ python3 -m http.server 8000
 
 ## License
 
-[MIT](LICENSE) © 2026 tanyaqiong31029
+[MIT](LICENSE) © 2026 tanyaqiongcode
