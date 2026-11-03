@@ -282,6 +282,7 @@
           <label><input type="checkbox" id="expOnlyLocked"> 仅导出已锁定行</label>
           <label><input type="checkbox" id="expSkipEmpty"> 排除含空单元格的行</label>
           <label><input type="checkbox" id="expIncludeConf" checked> 包含置信度</label>
+          <label><input type="checkbox" id="expSrcIdx" checked> 包含句序溯源（基准语句子区间）</label>
           <label>文件名 <input type="text" id="expBaseName" placeholder="对齐语料库"></label>
         </div>
       </div>
@@ -371,6 +372,7 @@
 
     <h2>六、导出</h2>
     <ul>
+      <li><strong>句序溯源</strong>（默认开启）：Excel / CSV / TSV 附「句序」列、TMX 附 x-src-idx 属性，标注每行对应的<strong>基准语句子区间</strong>——对照原稿核查时可直接定位；编辑器中把鼠标悬停在行号上也会显示段落与句序。</li>
       <li><strong>TMX 多语言版</strong>：符合 TMX 1.4 规范，一个 &lt;tu&gt; 内含所有语言的 &lt;tuv&gt;；OmegaT、Trados、memoQ 等均支持。</li>
       <li><strong>两两 TMX（ZIP）</strong>：基准语 × 每个译本各一个双语 TMX 文件，方便分发给不同语向的团队。</li>
       <li><strong>Excel / CSV</strong>：行号 + 各版本列；CSV 带 BOM，Excel 打开不乱码。</li>

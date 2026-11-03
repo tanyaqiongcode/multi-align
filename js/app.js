@@ -1,6 +1,7 @@
 'use strict';
 /* 多语平行语料对齐工作台 —— 主控制器 */
 (function () {
+  window.__appEvaled = Date.now();  // E2E 探针：证明本脚本已执行（区分"未加载"与"init 未跑"）
   const U = PA.util, Seg = PA.Seg, Aligner = PA.Aligner, Merge = PA.Merge, Imp = PA.Import, Exp = PA.Export;
 
   const LS_KEY = 'multialign_autosave_v1';
@@ -93,6 +94,7 @@
     el.expOnlyLocked = E('expOnlyLocked');
     el.expSkipEmpty = E('expSkipEmpty');
     el.expIncludeConf = E('expIncludeConf');
+    el.expSrcIdx = E('expSrcIdx');
     el.expBaseName = E('expBaseName');
     el.exportPreview = E('exportPreview');
     el.exportCards = E('exportCards');
@@ -796,6 +798,16 @@
       '" spellcheck="false">' + inner + '</td>';
   }
 
+  /* 句序溯源提示：TU.srcIdx → 段落与句子区间（基准语），供行号悬停与信息栏显示 */
+  function srcHint(tu) {
+    if (!tu || !tu.srcIdx || !tu.srcIdx.length) return '';
+    const segs = state.segs[state.pivotId] || [];
+    const lo = tu.srcIdx[0], hi = tu.srcIdx[tu.srcIdx.length - 1];
+    const para = segs[lo] && segs[lo].para !== undefined ? segs[lo].para : null;
+    const range = lo === hi ? String(lo + 1) : (lo + 1) + '–' + (hi + 1);
+    return (para !== null ? '第' + (para + 1) + '段 · ' : '') + '基准语句 ' + range;
+  }
+
   function rowHTML(tu, rid) {
     const vis = visibleVersions();
     const cls = ['trow'];
@@ -804,8 +816,9 @@
     if (tu.modified) cls.push('row-mod');
     if (filteredOut(tu)) cls.push('f-hidden');
     const cells = vis.map(v => cellHTML(tu, rid, v.id)).join('');
+    const hint = srcHint(tu);
     return '<tr class="' + cls.join(' ') + '" data-rid="' + rid + '" data-locked="' + (tu.locked ? 1 : 0) + '">' +
-      '<td class="c-num">' + (rid + 1) + '</td>' + cells +
+      '<td class="c-num"' + (hint ? ' title="' + esc(hint) + '"' : '') + '>' + (rid + 1) + '</td>' + cells +
       '<td class="c-conf">' + confDot(tu) + '</td>' +
       '<td class="c-lock"><input type="checkbox" class="lockcb"' + (tu.locked ? ' checked' : '') + ' title="锁定此行"></td></tr>';
   }
@@ -899,8 +912,11 @@
     let shown = total;
     if (state.filter !== 'all') shown = state.tus.filter(t => !filteredOut(t)).length;
     const pivot = byId(state.pivotId);
+    const selTu = state.selectedRow >= 0 && state.selectedRow < total ? state.tus[state.selectedRow] : null;
+    const selHint = selTu ? srcHint(selTu) : '';
     el.editorInfo.innerHTML = '共 <b>' + U.fmt(total) + '</b> 个翻译单元 · ' + vis + ' 列' +
       (pivot ? ' · 基准语：<b>' + esc(pivot.name) + '</b>' : '') +
+      (selHint ? ' · 选中行：' + esc(selHint) : '') +
       (state.filter !== 'all' ? ' · 筛选后 ' + U.fmt(shown) + ' 行' : '') +
       ' · 已锁定 ' + state.tus.filter(t => t.locked).length + ' 行';
     el.rowCount.textContent = '已渲染 ' + U.fmt(Math.min(state.renderTo, total)) + ' / ' + U.fmt(total) + ' 行（滚动加载）';
@@ -1022,6 +1038,8 @@
     a.conf = Math.min(a.conf, b.conf);
     a.locked = a.locked && b.locked;
     a.modified = true;
+    const merged = (a.srcIdx || []).concat(b.srcIdx || []);
+    a.srcIdx = merged.filter((v, i) => merged.indexOf(v) === i).sort((x, y) => x - y);  // 句序并集
     state.tus.splice(rid + 1, 1);
     renderEditorKeepSel();
     autosaveSoon();
@@ -1297,7 +1315,7 @@
       const btn = e.target.closest('[data-export]');
       if (btn) doExport(btn.dataset.export);
     });
-    [el.expOnlyLocked, el.expSkipEmpty, el.expIncludeConf].forEach(cb =>
+    [el.expOnlyLocked, el.expSkipEmpty, el.expIncludeConf, el.expSrcIdx].forEach(cb =>
       cb.addEventListener('change', () => renderExportPreview()));
     el.expBaseName.addEventListener('input', U.debounce(renderExportPreview, 400));
   }
@@ -1323,10 +1341,12 @@
     const show = rows.slice(0, 5);
     let html = '<div class="exp-note">当前选项下将导出 <b>' + U.fmt(rows.length) + '</b> 行' +
       (rows.length !== state.tus.length ? '（共 ' + U.fmt(state.tus.length) + ' 行）' : '') + '，预览前 5 行：</div>';
+    const wantSrc = el.expSrcIdx.checked;
     html += '<div class="exp-table-wrap"><table class="exp-table"><tr><th>#</th>' +
+      (wantSrc ? '<th>句序</th>' : '') +
       state.versions.map(v => '<th>' + esc(v.name) + '</th>').join('') + '</tr>';
     show.forEach(r => {
-      html += '<tr><td>' + (r.idx + 1) + '</td>' + state.versions.map(v => {
+      html += '<tr><td>' + (r.idx + 1) + '</td>' + (wantSrc ? '<td>' + esc(Exp.srcIdxLabel(r.tu) || '—') + '</td>' : '') + state.versions.map(v => {
         const t = (r.tu.cells[v.id] || '').trim();
         return '<td title="' + esc(t) + '">' + esc(t.length > 60 ? t.slice(0, 60) + '…' : t) + '</td>';
       }).join('') + '</tr>';
@@ -1340,7 +1360,7 @@
     const rows = exportRows();
     if (!rows.length) { toast('当前筛选条件下没有可导出的行', 'warn'); return; }
     const base = (el.expBaseName.value.trim() || '对齐语料库').replace(/[\\/:*?"<>|]/g, '_');
-    const o = { srclang: (byId(state.pivotId) || state.versions[0]).lang, includeConf: el.expIncludeConf.checked, filename: base };
+    const o = { srclang: (byId(state.pivotId) || state.versions[0]).lang, includeConf: el.expIncludeConf.checked, srcIdx: el.expSrcIdx.checked, filename: base };
     const versions = state.versions;
     try {
       if (kind === 'tmx') {
@@ -1539,5 +1559,12 @@
     window.addEventListener('beforeunload', autosave);
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  /* 防御：若 DOMContentLoaded 已触发（延迟加载/虚拟时钟竞态），直接初始化。
+   * E2E 实测：无头虚拟时钟下偶发 DCL 早于监听注册 → init 不运行 →
+   * 全部按钮失效（hash 探针取证）。 */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();

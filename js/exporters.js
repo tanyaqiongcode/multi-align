@@ -30,6 +30,10 @@ PA.Export = (function () {
       if (o.includeConf) {
         out += '      <prop type="confidence">' + Math.round((r.tu.conf || 0) * 100) + '</prop>\n';
       }
+      if (o.srcIdx) {
+        const lbl = srcIdxLabel(r.tu);
+        if (lbl) out += '      <prop type="x-src-idx">' + lbl + '</prop>\n';
+      }
       versions.forEach(v => {
         const text = (r.tu.cells[v.id] || '').trim();
         if (!text) return;
@@ -119,9 +123,11 @@ PA.Export = (function () {
   }
 
   function buildXLSX(versions, rows, o) {
-    const headers = ['行号'].concat(versions.map(v => v.name + '（' + v.lang + '）'));
+    const headers = ['行号'];
+    if (o.srcIdx) headers.push('句序');
+    headers.push.apply(headers, versions.map(v => v.name + '（' + v.lang + '）'));
     if (o.includeConf) headers.push('置信度(%)');
-    const cols = headers.map((h, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + (i === 0 ? 7 : 44) + '" customWidth="1"/>').join('');
+    const cols = headers.map((h, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + (i === 0 ? 7 : (o.srcIdx && i === 1 ? 9 : 44)) + '" customWidth="1"/>').join('');
 
     let sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
     sheet += '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
@@ -131,12 +137,16 @@ PA.Export = (function () {
     rows.forEach((r, ri) => {
       const rn = ri + 2;
       let cells = '<c r="A' + rn + '" t="inlineStr"><is><t>' + (r.idx + 1) + '</t></is></c>';
+      if (o.srcIdx) {
+        cells += '<c r="B' + rn + '" t="inlineStr"><is><t>' + xmlEsc(srcIdxLabel(r.tu)) + '</t></is></c>';
+      }
+      const off = o.srcIdx ? 1 : 0;
       versions.forEach((v, ci) => {
         const text = (r.tu.cells[v.id] || '').trim();
-        cells += '<c r="' + colName(ci + 1) + rn + '" t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(text) + '</t></is></c>';
+        cells += '<c r="' + colName(ci + 1 + off) + rn + '" t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(text) + '</t></is></c>';
       });
       if (o.includeConf) {
-        cells += '<c r="' + colName(versions.length + 1) + rn + '" t="inlineStr"><is><t>' + Math.round((r.tu.conf || 0) * 100) + '</t></is></c>';
+        cells += '<c r="' + colName(versions.length + 1 + off) + rn + '" t="inlineStr"><is><t>' + Math.round((r.tu.conf || 0) * 100) + '</t></is></c>';
       }
       sheet += '<row r="' + rn + '">' + cells + '</row>';
     });
@@ -208,11 +218,15 @@ PA.Export = (function () {
   }
   function buildDelimited(versions, rows, o) {
     const sep = o.sep || ',';
-    const headers = ['行号'].concat(versions.map(v => v.name));
+    const headers = ['行号'];
+    if (o.srcIdx) headers.push('句序');
+    headers.push.apply(headers, versions.map(v => v.name));
     if (o.includeConf) headers.push('置信度(%)');
     const lines = [headers.map(h => csvField(h, sep)).join(sep)];
     rows.forEach(r => {
-      const fields = [String(r.idx + 1)].concat(versions.map(v => (r.tu.cells[v.id] || '').trim()));
+      const fields = [String(r.idx + 1)];
+      if (o.srcIdx) fields.push(srcIdxLabel(r.tu));
+      fields.push.apply(fields, versions.map(v => (r.tu.cells[v.id] || '').trim()));
       if (o.includeConf) fields.push(String(Math.round((r.tu.conf || 0) * 100)));
       lines.push(fields.map(f => csvField(f, sep)).join(sep));
     });
@@ -253,6 +267,13 @@ PA.Export = (function () {
     return makeZip(files);
   }
 
+  /* 句序溯源标签：TU.srcIdx（基准语句子下标）→ "12" / "12-13"（1 基） */
+  function srcIdxLabel(tu) {
+    if (!tu || !tu.srcIdx || !tu.srcIdx.length) return '';
+    const lo = tu.srcIdx[0], hi = tu.srcIdx[tu.srcIdx.length - 1];
+    return lo === hi ? String(lo + 1) : (lo + 1) + '-' + (hi + 1);
+  }
+
   /* ---------- SRT 字幕 ---------- */
   /* TU 行 → SRT 字幕组。versions 为当前版本数组（纯函数，不读全局状态）；
    * 缺时间轴（tu.t0 未被 attachTiming 附着）或整行台词全空的行会被过滤。 */
@@ -287,7 +308,7 @@ PA.Export = (function () {
   }
 
   return {
-    xmlEsc, buildTMX, makeZip, buildXLSX, buildDelimited, buildTXT, buildPairwiseZip,
+    xmlEsc, buildTMX, makeZip, buildXLSX, buildDelimited, buildTXT, buildPairwiseZip, srcIdxLabel,
     srtGroups, formatSrtGroups, buildSrtsZip, uniqueName, TOOL_VERSION
   };
 })();

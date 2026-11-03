@@ -103,10 +103,21 @@ print('ZIP/XML OK', len(sys.argv)-1, 'files')`;
     try {
       execFileSync('python3', ['-c', 'import openpyxl,sys; wb=openpyxl.load_workbook(sys.argv[1]); ws=wb.active; assert ws.max_row==15 and ws.max_column==8, (ws.max_row,ws.max_column)', tmpX], { stdio: 'pipe' });
       ok(true, 'openpyxl 可打开（15 行 8 列）');
+      const tmpX2 = path.join(require('os').tmpdir(), 'ma_test_src.xlsx');
+      fs.writeFileSync(tmpX2, Buffer.from(await Exp.buildXLSX(versions, rows, { includeConf: true, srcIdx: true }).arrayBuffer()));
+      execFileSync('python3', ['-c', 'import openpyxl,sys; wb=openpyxl.load_workbook(sys.argv[1]); ws=wb.active; assert ws.max_column==9, ws.max_column; assert ws["B1"].value=="\u53e5\u5e8f" and ws["B2"].value=="1", (ws["B1"].value, ws["B2"].value)', tmpX2], { stdio: 'pipe' });
+      ok(true, 'XLSX 句序列（B1=句序，B2=1，9 列）');
     } catch (e) { ok(false, 'openpyxl 校验失败: ' + e.message.split('\n')[0]); }
   } else skip('openpyxl 打开校验');
   const csv = Exp.buildDelimited(versions, rows, { sep: ',', includeConf: true });
   ok(csv.split('\r\n').length === 15, `CSV 15 行 → 实际 ${csv.split('\r\n').length}`);
+  // 句序溯源列（交叉审计：LLM 因摘录丢失原文位置而错配——该列让审校者能回查原稿）
+  const csvSrc = Exp.buildDelimited(versions, rows, { sep: ',', srcIdx: true });
+  const csvSrcLines = csvSrc.split('\r\n');
+  ok(csvSrcLines[0].split(',').indexOf('句序') === 1, 'CSV 句序列位于行号后');
+  ok(csvSrcLines[1].startsWith('1,1,') && csvSrcLines[9].startsWith('9,9,'), 'CSV 句序值与行号对应（1 基）');
+  const tmxSrc = Exp.buildTMX(versions, rows, { srclang: 'zh-CN', includeConf: false, srcIdx: true, filename: 'd' });
+  ok(tmxSrc.includes('<prop type="x-src-idx">1</prop>'), 'TMX 句序溯源属性（x-src-idx）');
   ok(csv.includes('"'), 'CSV 含引号转义字段（含逗号的句子被引号包裹）');
   ok(Exp.buildTXT(versions, rows).split('\n').length === 14, 'TXT 14 行');
 
