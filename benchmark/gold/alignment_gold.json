@@ -20518,6 +20518,87 @@
           ]
         ]
       ]
+    },
+    {
+      "id": "zh-en-predicate-trap",
+      "note": "LLM 对齐失误场景复现：相邻两句共享数字关键词（3 个民族 / 3 groups）但谓语不同（国家承认 vs 个人申请）。单调 DP + 长度模型不受关键词诱导——免疫性回归证明",
+      "source": {
+        "lang": "zh-CN",
+        "sentences": [
+          "这 3 个同名的民族在传统边界的基础上获得了国家承认。",
+          "此后，部分成员以个人身份主动申请识别并成为正式成员。"
+        ]
+      },
+      "target": {
+        "lang": "en",
+        "sentences": [
+          "The 3 groups, which share the same name, secured state recognition on the basis of their traditional boundaries.",
+          "Afterwards, some members applied for recognition as individuals and became formal members."
+        ]
+      },
+      "gold": [
+        [
+          [
+            "0"
+          ],
+          [
+            "0"
+          ]
+        ],
+        [
+          [
+            "1"
+          ],
+          [
+            "1"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "zh-en-insert-absorption",
+      "note": "LLM 失误的等价形态：英译开头多一句介绍句（0-1 插入）且含相同数字构成关键词陷阱。xfail：插入句被 1-2 吸收而非识别为未匹配——正确译文在场但被污染，比错配更隐蔽；根因同三个漏译用例（删除代价高于合并），属 1-0/0-1 路线图",
+      "xfail": true,
+      "xfailMinF1": 0.35,
+      "source": {
+        "lang": "zh-CN",
+        "sentences": [
+          "这 3 个同名的民族在传统边界的基础上获得了国家承认。",
+          "此后，部分成员以个人身份主动申请识别并成为正式成员。"
+        ]
+      },
+      "target": {
+        "lang": "en",
+        "sentences": [
+          "These 3 groups have a long and complicated history.",
+          "The three groups secured state recognition on the basis of their traditional boundaries.",
+          "Afterwards, some members applied for recognition as individuals and became formal members."
+        ]
+      },
+      "gold": [
+        [
+          [],
+          [
+            "0"
+          ]
+        ],
+        [
+          [
+            "0"
+          ],
+          [
+            "1"
+          ]
+        ],
+        [
+          [
+            "1"
+          ],
+          [
+            "2"
+          ]
+        ]
+      ]
     }
   ]
 }

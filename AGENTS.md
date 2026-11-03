@@ -8,7 +8,7 @@
 ## 常用命令
 ```bash
 npx eslint .                                      # lint（0 error 0 warning，no-unused-vars 为 error）
-node agent-skill/scripts/pipeline_test.js         # 43 项无头回归，必须全过
+node agent-skill/scripts/pipeline_test.js         # 无头回归（数量以脚本输出为准），必须全过
 node benchmark/run_benchmark.js --min-f1 0.97     # F1 基准（基线 100%），必须达标
 uvx pre-commit run --all-files                    # 提交前全量自检
 ```
