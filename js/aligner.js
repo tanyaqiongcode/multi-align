@@ -5,6 +5,10 @@
  */
 PA.Aligner = (function () {
 
+  /* 删除/插入珠长度罚分默认封顶。标定依据（18 用例 + 6 语样例全参数扫描）：
+   * ≤80 时中段/数字漏译用例转正且零回归；≤60 时插入吸收用例劣化为 0%
+   * （过度删除），=0（平坦罚分）会破坏样例的正确 1-2 合并。80 为唯一安全最优点。 */
+  const DEFAULT_DEL_CAP = 80;
   /* 误差函数（Abramowitz & Stegun 7.1.26 近似） */
   function erf(x) {
     const s = x < 0 ? -1 : 1;
@@ -61,6 +65,12 @@ PA.Aligner = (function () {
       else {
         const z = (lb - la) / Math.sqrt(sum * o.variance);
         c = -100 * Math.log(pd(z));
+      }
+      /* 删除/插入珠的长度罚分封顶。动机：长度先验对"漏译/增译"是必然条件
+       * 而非意外证据，全额计入会让 DP 用 1-2 吸收替代诚实的删除（插入吸收
+       * xfail 用例的根因）。o.delCap 可显式覆盖，缺省 DEFAULT_DEL_CAP。 */
+      if (ni === i || nj === j) {
+        c = Math.min(c, o.delCap !== undefined ? o.delCap : DEFAULT_DEL_CAP);
       }
       c += PEN[penOf[tk - 1]];
 
