@@ -382,15 +382,21 @@
   async function importFileToVersion(v, file, card) {
     try {
       const name = (file.name || '').toLowerCase();
+      const isSubtitle = name.endsWith('.srt') || name.endsWith('.vtt');
+      const SRT = PA.SRT; // 字幕模块可能因缓存错配或单文件加载失败而缺失
+      if (isSubtitle && !SRT) {
+        toast('字幕解析模块未加载，请刷新页面（Cmd/Ctrl+Shift+R）后重试', 'err');
+        return;
+      }
       let r;
-      if (name.endsWith('.srt') || name.endsWith('.vtt')) {
+      if (isSubtitle) {
         r = { text: await Imp.readTextFile(file), type: 'srt' };
       } else {
         r = await Imp.readAny(file);
       }
       let text = (r.text || '').replace(/\u00a0/g, ' ');
       if (!text.trim()) { toast('文件内容为空', 'warn'); return; }
-      if (r.type === 'srt' || PA.SRT.looksLikeSrt(text)) {
+      if (r.type === 'srt' || (SRT && SRT.looksLikeSrt(text))) {
         const ok = applySrtToVersion(v, text, file.name, card);
         updateStep1Bar();
         return ok;
