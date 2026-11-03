@@ -55,15 +55,16 @@ PA.Merge = (function () {
       }
     });
 
-    /* 每个分量所含句对的平均置信度 */
+    /* 每个分量所含句对的置信度——取各版本最低值（min）。
+     * 语义：一行是否需要审校，取决于对得最差的那个版本（平均会稀释单版本
+     * 的 1-2/删除告警，见交叉审计发现：0.72 的污染被平均成 0.84）。 */
     const confAgg = new Map();
     pairResults.forEach(pr => {
       pr.beads.forEach(b => {
         if (!b.a.length || !b.b.length) return;
         const r = find(key(pivotPos, b.a[0]));
-        const g = confAgg.get(r) || { s: 0, c: 0 };
-        g.s += b.conf; g.c++;
-        confAgg.set(r, g);
+        const g = confAgg.get(r);
+        if (!g || b.conf < g.m) confAgg.set(r, { m: b.conf });
       });
     });
 
@@ -109,7 +110,7 @@ PA.Merge = (function () {
         ord = best === Infinity ? nPivot + (fallbackCtr++) : best;
       }
       const g = confAgg.get(root);
-      return { comp: comp, ord: ord, conf: g ? g.s / g.c : 0.2 };
+      return { comp: comp, ord: ord, conf: g ? g.m : 0.2 };
     }).sort((x, y) => x.ord - y.ord);
 
     /* 生成 TU */
@@ -131,7 +132,8 @@ PA.Merge = (function () {
         cells: cells,
         conf: Math.round(item.conf * 100) / 100,
         locked: false,
-        modified: false
+        modified: false,
+        srcIdx: (comp[pivotPos] || []).slice()  // 基准语句子下标（句序溯源，见导出与编辑器提示）
       });
     });
     return tus;

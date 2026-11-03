@@ -65,6 +65,10 @@ const tus = Merge.buildTUs(versions, pivot.id, segs, pairResults);
 ok(tus.length === 14, `合并为 14 个翻译单元 → 实际 ${tus.length}`);
 ok(tus.every(t => versions.every(v => (t.cells[v.id] || '').trim().length > 0)), '所有 TU 六语俱全');
 ok(tus[8].cells['English'].includes('split or merged'), '1-2 句对拼入同一单元格');
+ok(Math.abs(tus[8].conf - 0.72) < 1e-9 && tus[0].conf === 0.95,
+  '置信度取各版本最低值（1-2 行 0.72 而非平均 ~0.90，告警不被稀释）');
+ok(tus.every(t => Array.isArray(t.srcIdx) && t.srcIdx.length === 1) && tus[0].srcIdx[0] === 0 && tus[8].srcIdx[0] === 8,
+  'TU 记录基准语句子下标（句序溯源）：tus[0]→[0]，tus[8]→[8]');
 
 console.log('== 3. 对齐退化场景（无段落锚定） ==');
 const zhT = Seg.segmentRich('今天天气很好。\n我们一起去公园散步吧。\n公园里有很多漂亮的花。\n小明买了一个冰淇淋。\n他觉得很开心。', 'zh-CN', {});
@@ -230,6 +234,9 @@ d=Document(); d.add_paragraph('这是第一段第一句。这是第一段第二�
   ok(edgeTu.locked === true && edgeTu.modified === true, 'TU 布尔字段真值归一');
   ok(edgeTu.t0 === 1000 && edgeTu.t1 === 2500, 'TU 字符串时间轴归一为数值并保留');
   ok(PA.Project.normalizeTu({ cells: {}, t0: 5, t1: 2 }).t0 === undefined, '倒置时间轴被丢弃');
+  const srcNorm = PA.Project.normalizeTu({ cells: { a: 'x' }, srcIdx: [3, 'bad', 1, 1, -5] });
+  ok(JSON.stringify(srcNorm.srcIdx) === '[1,3]', 'TU 句序溯源下标校验（去重/排序/剔除非法值）');
+  ok(PA.Project.normalizeTu({ cells: { a: 'x' }, srcIdx: 'nope' }).srcIdx === undefined, '非法 srcIdx 被丢弃');
 
   console.log('== 10. CSV 公式注入防护 ==');
   const injVers = [{ id: 'v1', name: 'A', lang: 'en' }];

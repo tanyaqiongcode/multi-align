@@ -46,6 +46,15 @@ PA.Project = (function () {
       modified: !!tu.modified
     };
     if (isFinite(+tu.t0) && isFinite(+tu.t1) && +tu.t1 > +tu.t0) { out.t0 = +tu.t0; out.t1 = +tu.t1; }
+    var src = [];
+    if (Array.isArray(tu.srcIdx)) {
+      for (var q = 0; q < tu.srcIdx.length && src.length < 200; q++) {
+        var n = +tu.srcIdx[q];
+        if (isFinite(n) && n >= 0 && n < 1000000 && src.indexOf(Math.round(n)) < 0) src.push(Math.round(n));
+      }
+      src.sort(function (a, b) { return a - b; });
+      if (src.length) out.srcIdx = src;
+    }
     return out;
   }
 
