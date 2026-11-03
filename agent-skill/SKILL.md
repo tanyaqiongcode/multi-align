@@ -87,6 +87,8 @@ sed 's|<script src="js/app.js"></script>|<script src="js/app.js"></script><scrip
 5. **`aligner.js` DP 表**：`(n+1)*(m+1)` 超 260 万元素自动切滑窗模式；滑窗的 `bConsumed` 去重逻辑依赖 bead 有序，改对齐类型集合时要重验长文本路径。
 6. **IAB（内置浏览器）截图**可能报 `guest not attached` / `screenshot surface timed out`，标签页也可能变 about:blank——重试前先 `tabs.list()` 重新拿 id；截图验证一律优先无头 Chrome 方案。
 7. **el.xxx 单点故障的真实事故**：`btnSearchRun` 自 v1.0 起缺失于 index.html → `bindSearch()` 在 init 抛错 → 排在其后的 `bindExport`/`bindGlobal` 从未运行（导出按钮/确认框/快捷键全灭），而 DOM 冒烟只验证元素存在、从未点击，长期未被发现。防线：`E()` 缺失 id 页底红幅诊断 + `test/run_e2e.sh` 真实点击导出路径；新增绑定前先确认目标 id 存在。
+8. **漏 add 单文件**：断言与其实现分属不同文件时（如 CSV 防护的测试在 pipeline_test、实现在 exporters），分小提交极易漏 add 实现文件——本地自测过、CI 按 HEAD 跑必挂。每次 commit 后核对 `git status` 应为空。
+9. **无头 Chrome 虚拟时钟两坑（E2E 稳定性）**：(a) `--virtual-time-budget` 会随机截断脚本网络加载（每次缺失不同脚本、window.onerror 不报）——E2E 页面必须内联全部 js；(b) DCL 可能早于监听注册——app.js 已用 `readyState` 判断防御，新增入口脚本沿用该模式。取证探针：`window.__appEvaled`、`location.hash`。
 
 ## 详细参考
 

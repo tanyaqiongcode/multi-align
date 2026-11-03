@@ -47,8 +47,8 @@
 1. 节点 = `(versionIndex, sentenceIndex)`，键 `vi*1e6+si`，并查集。
 2. 每组 pairResults 的 bead 内所有 `a×b` 组合 union 到基准语句子上 → 连通分量。
 3. 分量排序键：含基准句取最小基准句号；否则借"该版本句→基准句"映射（`pivotMaps`，取前后邻均值）插入排序，保证无基准句的分量落在合理位置。
-4. 分量置信度 = 该分量涉及句对 conf 均值（无句对记 0.2）。
-5. 输出 TU：分量内各版本句子按序拼接（`isCJKText` 决定空格）。
+4. 分量置信度 = 该分量涉及句对 conf 的**最低值**（min，无句对记 0.2）。2026-11 由均值改为最低：一行是否需要审校取决于对得最差的版本，均值会稀释单版本 1-2/删除告警（交叉审计实测 0.72 被稀释为 0.84）。
+5. 输出 TU：分量内各版本句子按序拼接（`isCJKText` 决定空格）；`tu.srcIdx` = 基准语句子下标（升序数组），句序溯源用——app 的 mergeRows 取并集，`PA.Project.normalizeTu` 校验保留。
 
 ## docximport.js
 
@@ -68,7 +68,8 @@
 - `makeZip(files)`：STORE 方式 ZIP 写入器（UTF-8 名字标志 0x0800），XLSX 与两两 TMX ZIP 共用。
 - `buildTMX(versions, rows, o)`：TMX 1.4，`segtype="sentence"`，`srclang`=基准语 lang；`includeConf` 时加 `<prop type="confidence">`。空单元格的 tuv 跳过。
 - `buildXLSX`：最小 OOXML 包（6 个部件，inline string，首行粗体样式 s=1，列宽 44）。改单元格生成代码时注意 `r` 属性引号完整。
-- `buildDelimited`：CSV/TSV 共用，CSV 带 `"` 引号规则；下载时前置 BOM `\ufeff`（app.js 里拼）。
+- `buildDelimited`：CSV/TSV 共用，CSV 带 `"` 引号规则 + 公式注入防护（`=+@\t\r` 起始加 `'` 前缀，`-` 刻意不防护）；下载时前置 BOM `\ufeff`（app.js 里拼）。
+- `srcIdxLabel(tu)` + `o.srcIdx`：句序溯源——XLSX/CSV/TSV 加「句序」列（行号后）、TMX 加 `<prop type="x-src-idx">`。
 - `buildPairwiseZip`：基准语×每个其他版本过滤出双侧非空行，各生成双语 TMX 入 ZIP。
 
 ## app.js
@@ -85,6 +86,12 @@
 - 视图：`#view-home/work/docs/about`，`.view-on` 切换；工作台四步 `#pane1..4` + `.pane-on`。
 - 关键 class 契约：`.stepper li.step-on/.step-done`、`tr.trow .row-sel/.row-locked/.row-mod/.f-hidden/.row-flash`、`td.cell`（contenteditable）、`.conf-hi/.conf-mid/.conf-lo/.conf-mod`（置信度圆点配色）。
 - 删除/重命名任何带 id 的元素前，先全局搜索 app.js 中的 `E('...')` 引用。
+
+## test/ — 导出编排 E2E
+
+- **页面生成时内联全部 js 脚本**（零脚本网络请求）：Chrome `--virtual-time-budget` 会随机截断脚本网络加载（实测每次缺失不同脚本、window.onerror 不报），曾致本地 9/10 间歇失败——与被测代码无关；CI 的 runner 网络栈无此问题。
+- 片段全条件轮询（waitFor）而非固定 sleep；独立临时 user-data-dir 避免与常驻 Chrome 争默认 profile；`PA.util.download` 打桩捕获下载，断言三个文件名 + 零未捕获异常 + 零错误 toast。
+- 入口脚本防御模式：DCL 可能早于监听注册（同上虚拟时钟竞态），app.js 已用 `readyState` 判断直接初始化；探针 `window.__appEvaled`、`location.hash` 可区分"脚本未加载"与"init 未跑"。
 
 ## 对齐质量调参经验值
 
