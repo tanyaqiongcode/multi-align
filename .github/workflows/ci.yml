@@ -47,8 +47,8 @@ jobs:
             bash -c "node agent-skill/scripts/pipeline_test.js > /dev/null && node benchmark/run_benchmark.js --min-f1 0 > /dev/null"
           node test/check_coverage.js
 
-      - name: 依赖审计（devDependencies，high 级阻断）
-        run: npm audit --audit-level=high
+      - name: 依赖审计（仅运行时依赖，high 级阻断；devDep 漏洞由 Dependabot alerts 跟踪）
+        run: npm audit --omit=dev --audit-level=high
 
       - name: 导出编排 E2E（真实点击 TMX / SRT / SRT ZIP）
         run: bash test/run_e2e.sh
